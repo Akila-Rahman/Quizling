@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quizling</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #FFEADD;
+            color: #333;
+        }
+        .navbar {
+            background-color: #FCAEAE;
+        }
+        .btn-primary {
+            background-color: #FCAEAE;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #FFB6B6;
+        }
+        .level-badge {
+            background-color: #FFB6B6;
+            color: white;
+            border-radius: 12px;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <a class="navbar-brand" href="#">Quizling</a>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="teacher-mode" class="mb-5">
+            <h2>Teacher Mode</h2>
+            <form id="question-form">
+                <div class="form-group">
+                    <label for="subject">Subject Name:</label>
+                    <input type="text" id="subject" class="form-control" placeholder="Enter subject name" required>
+                </div>
+                <div class="form-group">
+                    <label for="question">Question:</label>
+                    <textarea id="question" class="form-control" placeholder="Enter your question" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Options:</label>
+                    <input type="text" class="form-control mb-2" placeholder="Option 1" required>
+                    <input type="text" class="form-control mb-2" placeholder="Option 2" required>
+                    <input type="text" class="form-control mb-2" placeholder="Option 3" required>
+                    <input type="text" class="form-control mb-2" placeholder="Option 4" required>
+                </div>
+                <div class="form-group">
+                    <label for="correct-answer">Correct Answer:</label>
+                    <input type="text" id="correct-answer" class="form-control" placeholder="Enter the correct answer" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Question</button>
+            </form>
+        </div>
+
+        <div id="student-mode">
+            <h2>Student Mode</h2>
+            <div class="form-group">
+                <label for="select-subject">Select Subject:</label>
+                <select id="select-subject" class="form-control">
+                    <option disabled selected>Choose a subject</option>
+                </select>
+            </div>
+            <button id="start-quiz" class="btn btn-primary">Start Quiz</button>
+
+            <div id="quiz-area" class="mt-4" style="display: none;">
+                <div id="question-box">
+                    <h4 id="quiz-question"></h4>
+                    <div id="quiz-options"></div>
+                </div>
+                <button id="next-question" class="btn btn-primary mt-3" style="display: none;">Next</button>
+            </div>
+
+            <div id="level-completion" class="mt-4" style="display: none;">
+                <h4>Level Completed!</h4>
+                <p>Your current level: <span id="current-level" class="level-badge">Newbie</span></p>
+                <button id="next-level" class="btn btn-primary">Next Level</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const levels = ["Newbie", "Thinker", "Knowledge Seeker", "Trivia Tyrant", "Quiz Overlord"];
+        let questions = {};
+        let currentSubject = "";
+        let currentLevel = 0;
+        let currentQuestionIndex = 0;
+        let quizQuestions = [];
+
+        const questionForm = document.getElementById('question-form');
+        const selectSubject = document.getElementById('select-subject');
+        const startQuizButton = document.getElementById('start-quiz');
+        const quizArea = document.getElementById('quiz-area');
+        const questionBox = document.getElementById('question-box');
+        const quizQuestion = document.getElementById('quiz-question');
+        const quizOptions = document.getElementById('quiz-options');
+        const nextQuestionButton = document.getElementById('next-question');
+        const levelCompletion = document.getElementById('level-completion');
+        const currentLevelBadge = document.getElementById('current-level');
+        const nextLevelButton = document.getElementById('next-level');
+
+        questionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const subject = document.getElementById('subject').value.trim();
+            const question = document.getElementById('question').value.trim();
+            const options = Array.from(document.querySelectorAll('#question-form input[placeholder^="Option"]')).map(input => input.value.trim());
+            const correctAnswer = document.getElementById('correct-answer').value.trim();
+
+            if (!questions[subject]) questions[subject] = [];
+
+            questions[subject].push({ question, options, correctAnswer });
+
+            if (!Array.from(selectSubject.options).some(opt => opt.value === subject)) {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                selectSubject.appendChild(option);
+            }
+
+            questionForm.reset();
+            alert('Question saved!');
+        });
+
+        startQuizButton.addEventListener('click', () => {
+            currentSubject = selectSubject.value;
+            if (!currentSubject) {
+                alert('Please select a subject.');
+                return;
+            }
+
+            currentLevel = 0;
+            loadLevel();
+        });
+
+        function loadLevel() {
+            quizQuestions = questions[currentSubject].slice();
+            quizQuestions = quizQuestions.sort(() => Math.random() - 0.5).slice(0, 5);
+            currentQuestionIndex = 0;
+
+            currentLevelBadge.textContent = levels[currentLevel];
+            levelCompletion.style.display = 'none';
+            quizArea.style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= quizQuestions.length) {
+                quizArea.style.display = 'none';
+                levelCompletion.style.display = 'block';
+                return;
+            }
+
+            const questionData = quizQuestions[currentQuestionIndex];
+            quizQuestion.textContent = questionData.question;
+            quizOptions.innerHTML = '';
+
+            questionData.options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('btn', 'btn-light', 'd-block', 'mb-2');
+                button.addEventListener('click', () => checkAnswer(option));
+                quizOptions.appendChild(button);
+            });
+
+            nextQuestionButton.style.display = 'none';
+        }
+
+        function checkAnswer(selected) {
+            const correctAnswer = quizQuestions[currentQuestionIndex].correctAnswer;
+            if (selected === correctAnswer) {
+                alert('Correct!');
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                alert('Wrong answer. Try again!');
+            }
+        }
+
+        nextLevelButton.addEventListener('click', () => {
+            if (currentLevel < levels.length - 1) {
+                currentLevel++;
+                loadLevel();
+            } else {
+                alert('You are now the Quiz Overlord!');
+                levelCompletion.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
